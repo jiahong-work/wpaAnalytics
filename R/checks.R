@@ -45,3 +45,4 @@ ana_report_core_action_turnout <-
     cli::cli_alert_info("Net Difference: {scales::comma(to_counts - est_to, accuracy = 1)}")
     cli::cli_alert_info("% Off Expected Turnout: {scales::percent((to_counts - est_to)/est_to, accuracy = 1)}")
   }
+
