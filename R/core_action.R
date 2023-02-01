@@ -1,5 +1,6 @@
 #' Replace the prefix on core action universes
 #'
+
 #' @param .us Prefix to replace `R` in core action universes. For example, setting
 #' `.us` to "Waters" replaces `R_ITB` and `R_GOTV` with `Waters_ITB` and `Waters_GOTV`.
 #' @param .them Prefix to replace `D` in core action universes.
