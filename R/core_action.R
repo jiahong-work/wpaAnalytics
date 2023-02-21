@@ -9,7 +9,7 @@
 #'
 #' @examples wpa_replace_universe_prefix(.us = "Smith", .them = "Jones")
 #'
-wpa_replace_universe_prefix <-
+ana_replace_universe_prefix <-
   function(.us = "R",
            .them = "D",
            .neutral = NULL) {
@@ -73,7 +73,7 @@ wpa_replace_universe_prefix <-
 #' @return Data frame with 12 core action universes appended.
 #' @export
 #'
-wpa_mk_12_universes <-
+ana_mk_12_universes <-
   function(.df,
            .us,
            .them,
@@ -102,11 +102,11 @@ wpa_mk_12_universes <-
       "Disengaged",
       "Dead_Weight"
     )
-
+    
     func <- switch (.func,
                     "mutate" = collapse::ftransform,
                     "transmute" = collapse::fcompute)
-
+    
     net <-
       collapse::get_elem(.df, .us) - collapse::get_elem(.df, .them)
     to <- collapse::get_elem(.df, .turnout)
@@ -137,27 +137,27 @@ wpa_mk_12_universes <-
         dplyr::all_of(all_universes),
         as.numeric
       ))
-
+    
     u_total <-
       collapse::fsum(matrixStats::rowSums2(collapse::qM(collapse::get_vars(df, all_universes))))
     assertthat::assert_that(u_total == collapse::fnrow(df),
                             msg = "Overlapping universes"
     )
-
+    
     if(.func == "transmute") {
       df <- dplyr::bind_cols(dplyr::select(.df, rnc_regid), df)
     }
-
+    
     # if (!is.null(.prefixes)) {
     #   assertthat::assert_that(length(.prefixes) == 2,
     #                           msg = "`.prefixes` must be a vector of length 2")
-  new_universes <- wpa_replace_universe_prefix(
-        .us_prefix,
-        .them_prefix,
-        .neutral_prefix
-      )
-      df <- data.table::setnames(df, old = all_universes, new = new_universes)
-      return(df)
+    new_universes <- wpa_replace_universe_prefix(
+      .us_prefix,
+      .them_prefix,
+      .neutral_prefix
+    )
+    df <- data.table::setnames(df, old = all_universes, new = new_universes)
+    return(df)
     #}
     #df
   }
@@ -184,7 +184,7 @@ wpa_mk_12_universes <-
 #' @examples
 #' wpa_def_12_universes()
 #'
-wpa_def_12_universes <- function(.net_ballot = "Net",
+ana_def_12_universes <- function(.net_ballot = "Net",
                                  .turnout_col = "Turnout",
                                  .net_hi = .35,
                                  .net_lo = .2,
@@ -248,14 +248,17 @@ wpa_def_12_universes <- function(.net_ballot = "Net",
 
 #' Utility function to get core action universe counts and percentages
 #'
-#' @param .df Data frame containing core action universes.
-#' @param .universes Character vector of core action universes.
-#'
+#' @param .df Data frame containing the core action universes.
+#' @param .universes Character vector of core action universe names, recommended to use along with 
+#'                   wpa_replace_universe_prefix
+#' .
+#
 #' @return Data frame
 #' @export
 #'
-#' @examples
-wpa_grab_core_action_stats <- function(.df,
+#' @examples wpa_grab_core_action_stats(.df=CLF_AZ_CD6_Scores_And_Flags,
+#'                                      .universes=wpa_replace_universe_prefix('Ciscomani','Engel','Congressional'))
+ana_grab_core_action_stats <- function(.df,
                                        .universes = wpa_replace_universe_prefix("R", "D")) {
   collapse::get_vars(.df, .universes) |>
     collapse::fsum() |>
@@ -268,9 +271,44 @@ wpa_grab_core_action_stats <- function(.df,
 
 
 
-wpa_export_core_action_counts <- function(.df,
+#' Grab the core action universe counts and export them to the 'Reports' folder
+#'
+#' @param .df Data frame containing the ballot and turnout columns
+#' @param .net_ballot Character name of column to use for net ballot. Defaults to `Net` 
+#' @param .turnout_col Character name of column to use for turnout column. Defaults to `Turnout`
+#' @param .net_hi Cutoff for net ballot to assign voters in `_ITB` universes.
+#' @param .net_lo Cutoff for net ballot to assign voters in `_Shore_Up` and `_Marginal`
+#' @param .to_hi Cutoff for high turnout.
+#' @param .to_midhi Cutoff for persuasion universe.
+#' @param .to_midlo Cutoff splitting `GOTV` and `GOTV_2`
+#' @param .to_lo Cutoff for low turnout. Values below this are assigned to `Dead_Weight`.
+#' @param .us_prefix Prefix for universes favoring our candidate. Defaults to `R`
+#' @param .them_prefix Prefix for universes favoring opponent. Defaults to `D`
+#' @param .neutral_prefix Prefix for neutral columns like Persuasion and Disengaged. Defaults to `NULL`
+#' @param .path  The root working directory of your project, the parent folder of the 'Reports' folder
+#' @param .suffix The suffix you want to append to the name of the core action count file, Defaults to `NULL`
+#'
+#' @return Data frame
+#' @export
+#'
+#' @examples
+#'  wpa_export_core_action_counts(.df=CLF_AZ_CD6_Scores_And_Flags,
+#'                                .net_ballot='NetBallot_Generic',
+#'                                .turnout_col='TUrnout',
+#'                                .net_hi = .35,
+#'                                .net_lo = .2,
+#'                                .to_hi = .9,
+#'                                .to_midhi = .65, 
+#'                                .to_midlo = .50,
+#'                                .to_lo = .15,
+#'                                .us_prefix = "R", 
+#'                                .them_prefix = "D",
+#'                                .neutral_prefix = 'Generic',
+#'                                .path = fs::path_wd(),
+#'                                .suffix = 'Generic'))
+ana_export_core_action_counts <- function(.df,
                                           .net_ballot = "Net",
-                                          .turnout_col = "TurnoutGeneral",
+                                          .turnout_col = "Turnout",
                                           .net_hi = .35,
                                           .net_lo = .2,
                                           .to_hi = .9,
@@ -311,7 +349,7 @@ wpa_export_core_action_counts <- function(.df,
     dplyr::transmute(universe = Universes,
                      Turnout,
                      PctExpTurnout = Turnout / tot_to)
-
+  
   cau_export <- cau_defs %>%
     dplyr::left_join(cau_counts) %>%
     dplyr::left_join(cau_to) %>%
@@ -324,21 +362,58 @@ wpa_export_core_action_counts <- function(.df,
       PctExpTurnout,
       UniverseEndPoints = def
     )
-
+  
   file_name <- ifelse(
     is.null(.suffix),
     "core_action_counts.csv",
     paste0("core_action_counts_", tolower(.suffix), ".csv")
   )
-
+  
   fs::dir_create(fs::path(.path, "Reports"))
   data.table::fwrite(cau_export,
                      fs::path(.path, "Reports", file_name))
   cau_export
 }
 
-wpa_def_asymmetrical_universes <- function(.net_ballot = "Net",
-                                           .turnout_col = "TurnoutGeneral",
+
+
+#' Set definitions of the asymmetric core action universes
+#'
+#' @param .net_ballot Character name of column to use for net ballot. Defaults to `Net` 
+#' @param .turnout_col Character name of column to use for turnout column. Defaults to `Turnout`
+#' @param .us_itb Cutoff for net ballot to assign voters to our candidate's `_ITB` universes.
+#' @param .us_gotv Cutoff for net ballot to assign voters to our candidate's `_GOTV` universes.
+#' @param .them_gotv Cutoff for net ballot to assign voters to the opposing candidate's `_GOTV` universes.
+#' @param .them_itb Cutoff for net ballot to assign voters to the opposing candidate's `_ITB` universes.
+#' @param .us_to_hi Cutoff for high turnout.
+#' @param .us_to_midhi Cutoff for persuasion universe.
+#' @param .us_to_midlo Cutoff splitting `GOTV` and `GOTV_2`
+#' @param .us_to_lo Cutoff for low turnout. Values below this are assigned to `Dead_Weight`.
+#' @param .us_prefix Prefix for universes favoring our candidate. Defaults to `R`
+#' @param .them_prefix Prefix for universes favoring opponent. Defaults to `D`
+#' @param .neutral_prefix Prefix for neutral columns like Persuasion and Disengaged. Defaults to `NULL`
+#'
+#' @return Tibble object
+#' @export
+#'
+#' @examples
+#' wpa_def_asymmetrical_universes(
+#' .net_ballot = "NetBallot_Generic",
+#' .turnout_col = "Turnout",
+#' .us_itb = .8,
+#' .us_gotv = .6,
+#' .them_gotv = .4,
+#' .them_itb = .2,
+#' .us_to_hi = .9,
+#' .us_to_midhi = .7,
+#' .us_to_midlo = .5,
+#' .us_to_lo = .2,
+#' .us_prefix = "GenericR",
+#' .them_prefix = "GenericD",
+#' .neutral_prefix = 'Generic')
+#' 
+ana_def_asymmetrical_universes <- function(.net_ballot = "Net",
+                                           .turnout_col = "Turnout",
                                            .us_itb = .8,
                                            .us_gotv = .6,
                                            .them_gotv = .4,
@@ -356,7 +431,7 @@ wpa_def_asymmetrical_universes <- function(.net_ballot = "Net",
     .them_gotv = .them_gotv,
     .them_itb = .them_itb
   )
-
+  
   defs <- list(
     glue::glue("{.net_ballot} > {cut_s$us_itb_lo} & turnout >= {.us_to_hi}"),
     glue::glue(
@@ -368,7 +443,7 @@ wpa_def_asymmetrical_universes <- function(.net_ballot = "Net",
     glue::glue(
       "({.net_ballot} > {cut_s$us_gotv_lo} & {.net_ballot} <= {cut_s$us_itb_lo}) & (turnout > {.us_to_midlo})"
     ),
-
+    
     glue::glue(
       "({.net_ballot} <= {cut_s$us_gotv_lo} & {.net_ballot} > {cut_s$them_gotv_hi}) & turnout >= {.us_to_midhi}"
     ),
@@ -398,19 +473,35 @@ wpa_def_asymmetrical_universes <- function(.net_ballot = "Net",
     ),
     def = unlist(defs)
   )
-
+  
 }
 
 
 
+#' Title
+#'
+#' @param .us_itb 
+#' @param .us_gotv 
+#' @param .them_gotv 
+#' @param .them_itb 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+ana_mk_aysm_splits(
+.us_itb = .8,
+.us_gotv = .6,
+.them_gotv = .4,
+.them_itb = .2)
 mk_aysm_splits <- function(.us_itb,
                            .us_gotv,
                            .them_gotv,
                            .them_itb) {
-  us_itb <- quantile(seq(1, -1, -.01), .us_itb)
-  us_gotv <- quantile(seq(1, -1, -.01), .us_gotv)
-  them_gotv <- quantile(seq(1, -1, -.01), .them_gotv)
-  them_itb <- quantile(seq(1, -1, -.01), .them_itb)
+  us_itb <- stats::quantile(seq(1, -1, -.01), .us_itb)
+  us_gotv <- stats::quantile(seq(1, -1, -.01), .us_gotv)
+  them_gotv <- stats::quantile(seq(1, -1, -.01), .them_gotv)
+  them_itb <- stats::quantile(seq(1, -1, -.01), .them_itb)
   list(
     us_itb_lo = us_itb,
     us_gotv_hi = us_itb,
@@ -418,17 +509,43 @@ mk_aysm_splits <- function(.us_itb,
     them_gotv_hi = them_gotv,
     them_gotv_lo = them_itb,
     them_itb_hi = them_itb
-
+    
   )
 }
 
 
 
 
-wpa_mk_asymmetrical_universes <- function(.df,
-                                          .us,
-                                          .them,
-                                          .turnout,
+#' Create asymmetric core action universes
+#'
+#' @param .df Data frame containing the ballot and turnout columns
+#' @param .us_ballot The ballot score for our candidate
+#' @param .them_ballot The ballot score for the opposing candidate
+#' @param .turnout_col Character name of column to use for turnout column. Defaults to `Turnout`
+#' @param .us_itb Cutoff for net ballot to assign voters to our candidate's `_ITB` universes.
+#' @param .us_gotv Cutoff for net ballot to assign voters to our candidate's `_GOTV` universes.
+#' @param .them_gotv Cutoff for net ballot to assign voters to the opposing candidate's `_GOTV` universes.
+#' @param .them_itb Cutoff for net ballot to assign voters to the opposing candidate's `_ITB` universes.
+#' @param .us_to_hi Cutoff for high turnout.
+#' @param .us_to_midhi Cutoff for persuasion universe.
+#' @param .us_to_midlo Cutoff splitting `GOTV` and `GOTV_2`
+#' @param .us_to_lo Cutoff for low turnout. Values below this are assigned to `Dead_Weight`.
+#' @param .us_prefix Prefix for universes favoring our candidate. Defaults to `R`
+#' @param .them_prefix Prefix for universes favoring opponent. Defaults to `D`
+#' @param .neutral_prefix Prefix for neutral columns like Persuasion and Disengaged. Defaults to `NULL`
+#' @param .func The function you want to use to mutate the asymmetric core action universes, 
+#'              could be 'mutate' if you want to append the universe cols to the original data frame,
+#'              or 'transmute' if you want to generate a nmew table with only the new universe cols and rnc_regid. 
+#'              Defaults to `mutate`
+#'
+#' @return Data frame
+#' @export
+#'
+#' @examples
+ana_mk_asymmetrical_universes <- function(.df,
+                                          .us_ballot,
+                                          .them_ballot,
+                                          .turnout_col,
                                           .us_itb,
                                           .us_gotv,
                                           .them_gotv,
@@ -466,7 +583,7 @@ wpa_mk_asymmetrical_universes <- function(.df,
   func <- switch (.func,
                   "mutate" = collapse::ftransform,
                   "transmute" = collapse::fcompute)
-
+  
   cut_s <- mk_aysm_splits(
     .us_itb = .us_itb,
     .us_gotv = .us_gotv,
@@ -507,7 +624,7 @@ wpa_mk_asymmetrical_universes <- function(.df,
   ) %>%
     dplyr::mutate(dplyr::across(dplyr::all_of(all_universes),
                                 as.numeric))
-
+  
   # u_total <-
   #   collapse::fsum(matrixStats::rowSums2(collapse::qM(collapse::get_vars(df, all_universes))))
   # assertthat::assert_that(u_total == collapse::fnrow(df),
@@ -515,7 +632,7 @@ wpa_mk_asymmetrical_universes <- function(.df,
   if (.func == "transmute") {
     df <- dplyr::bind_cols(dplyr::select(.df, rnc_regid), df)
   }
-
+  
   # if (!is.null(.prefixes)) {
   #   assertthat::assert_that(length(.prefixes) == 2,
   #                           msg = "`.prefixes` must be a vector of length 2")
@@ -529,9 +646,32 @@ wpa_mk_asymmetrical_universes <- function(.df,
   #df
 }
 
-wpa_export_asymmetrical_counts <- function(.df,
+
+#' Export asymmetric core action universe counts
+#'
+#' @param .df Data frame containing the ballot and turnout columns
+#' @param .net_ballot Character name of column to use for net ballot. Defaults to `Net` 
+#' @param .turnout_col Character name of column to use for turnout column. Defaults to `Turnout`
+#' @param .us_itb Cutoff for net ballot to assign voters to our candidate's `_ITB` universes.
+#' @param .us_gotv Cutoff for net ballot to assign voters to our candidate's `_GOTV` universes.
+#' @param .them_gotv Cutoff for net ballot to assign voters to the opposing candidate's `_GOTV` universes.
+#' @param .them_itb Cutoff for net ballot to assign voters to the opposing candidate's `_ITB` universes.
+#' @param .us_to_hi Cutoff for high turnout.
+#' @param .us_to_midhi Cutoff for persuasion universe.
+#' @param .us_to_midlo Cutoff splitting `GOTV` and `GOTV_2`
+#' @param .us_to_lo Cutoff for low turnout. Values below this are assigned to `Dead_Weight`.
+#' @param .us_prefix Prefix for universes favoring our candidate. Defaults to `R`
+#' @param .them_prefix Prefix for universes favoring opponent. Defaults to `D`
+#' @param .neutral_prefix Prefix for neutral columns like Persuasion and Disengaged. Defaults to `NULL`
+#' @param .path  The root working directory of your project, the parent folder of the 'Reports' folder
+#'
+#' @return Data frame
+#' @export
+#'
+#' @examples
+ana_export_asymmetrical_counts <- function(.df,
                                            .net_ballot = "Net",
-                                           .turnout_col = "TurnoutGeneral",
+                                           .turnout_col = "Turnout",
                                            .us_itb = .8,
                                            .us_gotv = .6,
                                            .them_gotv = .4,
@@ -575,7 +715,7 @@ wpa_export_asymmetrical_counts <- function(.df,
     dplyr::transmute(universe = Universes,
                      Turnout,
                      PctExpTurnout = Turnout / tot_to)
-
+  
   cau_export <- cau_defs %>%
     dplyr::left_join(cau_counts) %>%
     dplyr::left_join(cau_to) %>%
@@ -594,15 +734,24 @@ wpa_export_asymmetrical_counts <- function(.df,
   cau_export
 }
 
-ana_group_core_action_cols <- function(.ballot_obj){
-  obj <- purrr::map(.ballot_obj$race,
-    ~ wpa_replace_universe_prefix(
-      .us = ana_get_ballot_cols(.ballot_obj, .x)$us_prefix,
-      .them = ana_get_ballot_cols(.ballot_obj,.x)$them_prefix,
-      .neutral = ana_get_ballot_cols(.ballot_obj, .x)$neutral_prefix
-    )
-  )
-  names(obj) <- .ballot_obj$race
-  obj
-}
 
+
+#' #' Title
+#' #'
+#' #' @param .ballot_obj An object that contains  a list of different elections(races)
+#' #'
+#' #' @return
+#' #' @export
+#' #'
+#' #' @examples
+#' ana_group_core_action_cols <- function(.ballot_obj){
+#'   obj <- purrr::map(.ballot_obj$race,
+#'                     ~ wpa_replace_universe_prefix(
+#'                       .us = ana_get_ballot_cols(.ballot_obj, .x)$us_prefix,
+#'                       .them = ana_get_ballot_cols(.ballot_obj,.x)$them_prefix,
+#'                       .neutral = ana_get_ballot_cols(.ballot_obj, .x)$neutral_prefix
+#'                     )
+#'   )
+#'   names(obj) <- .ballot_obj$race
+#'   obj
+#' }
