@@ -934,44 +934,50 @@ ana_turnout_issue_pipeline <- function(.df, .base="TurnoutGeneral",
 }
 
 
-
-#' Title
+#' Analyze Core Action
 #'
-#' @param .df 
-#' @param .universes 
+#' This function performs an analysis of the core action.
 #'
-#' @return
-#' @export
-#'
+#' @param .df A data frame containing the data to be analyzed.
+#' @param .universes A character vector containing the names of the universes to be included in the analysis.
+#' @return A data frame containing the results of the analysis.
 #' @examples
-# FDATAN <- FDATA %>%
-#   dplyr::mutate(core = case_when(Paxton_ITB == 1 ~ 'r_itb',
-#                                  Paxton_Shore_Up == 1 ~ 'r_shore_up',
-#                                  Paxton_GOTV == 1 ~ 'r_gotv',
-#                                  Paxton_GOTV_T2 == 1 ~ 'r_gotv_t2',
-#                                  AG_Persuasion == 1 ~ 'persuasion',
-#                                  AG_Persuasion_T2 == 1 ~ 'persuasion_t2',
-#                                  Garza_Marginals == 1 ~ 'd_marginals',
-#                                  Garza_GOTV == 1 ~ 'd_gotv',
-#                                  Garza_GOTV_T2 == 1 ~ 'd_gotv_t2',
-#                                  Garza_ITB == 1 ~ 'd_itb',
-#                                  AG_Disengaged == 1 ~ 'disengaged',
-#                                  AG_Dead_Weight == 1 ~ 'dead_weight'))
-
-# ST <- ana_core_action(ST, .universes = wpa_replace_universe_prefix("Paxton", "Garza", "AG"))
-
+#' ana_core_action(df = my_data, universes = c("universe1", "universe2"))
+#' @importFrom dplyr left_join
+#' @importFrom collapse get_vars fsubset
+#' @importFrom tidyr gather
 ana_core_action <- function(.df, .universes) {
-  df <- collapse::get_vars(.df, c("rnc_regid",.universes))
+  df <- collapse::get_vars(.df, c("rnc_regid", .universes))
   cau <- tidyr::gather(df, core, flag, -rnc_regid) %>%
-    collapse::fsubset(flag == 1) 
-  # %>%
-  #   collapse::fselect(-flag)
+    collapse::fsubset(flag == 1)%>%
+    collapse::fselect(-flag)
   dplyr::left_join(.df, cau, by = "rnc_regid")
 }
 
 
-ana_get_top_universe_issues <-
-  function(.df,
+#' Get the top universe issues for each core group
+#'
+#' This function extracts the top ten issues from a data frame based on a specific column, and then counts the occurrences of those issues in each of the core groups specified by another column. The resulting data frame shows the counts of each top issue in each core group.
+#'
+#' @param .df A data frame to extract the top issues from.
+#' @param .top_ten A character vector specifying the top ten issues to extract.
+#' @param .issue_col The name of the column containing the issues in the data frame. The default value is "topissue".
+#' @param .core_col The name of the column containing the core groups in the data frame. The default value is "core".
+#' @param .us The label for the "us" core group. The default value is "R".
+#' @param .them The label for the "them" core group. The default value is "D".
+#' @param .neutral The label for the "neutral" core group. The default value is NULL.
+#'
+#' @return A data frame showing the counts of each top issue in each core group.
+#'
+#' @examples
+#' ana_get_top_universe_issues(df, c("issue1", "issue2"), "top_issues", "core_group", "R", "D", NULL)
+#'
+#' @import dplyr
+#' @import tidyr
+#' @import rlang
+#'
+#' @export
+ana_get_top_universe_issues <- function(.df,
            .top_ten,
            .issue_col = "topissue",
            .core_col = "core",
@@ -986,12 +992,40 @@ ana_get_top_universe_issues <-
       tidyr::spread(!!rlang::sym(.core_col), count) %>%
       dplyr::select(!!rlang::sym(.issue_col),
                     wpa_replace_universe_prefix(.us, .them, .neutral))
-  }
+}
 
 
 
 
-ana_plot_top_issues <- function(.df, .values, .models, .txt_size=18, .nudge=9000){
+
+Description:
+  This function creates a bar plot with text labels for the top issues in each model.
+
+Arguments:
+  .df: A data frame containing the data to be plotted.
+  .values: A string indicating the name of the column containing the values to be plotted.
+  .models: A string indicating the name of the column containing the models to be plotted.
+  .txt_size: An integer indicating the font size of the text in the plot. Default is 18.
+  .nudge: A numeric value indicating the distance to nudge the text labels from the bars. Default is 9000.
+
+Value:
+  A ggplot object containing the bar plot with text labels.
+
+Examples:
+ana_plot_top_issues(.df, .values, .models, .txt_size = 18, .nudge = 9000)
+  # Create a sample data frame
+  df <- data.frame(models = rep(c("model_1", "model_2", "model_3"), each = 5),
+                   issues = rep(c("issue_a", "issue_b", "issue_c", "issue_d", "issue_e"), 3),
+                   values = c(100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500))
+  
+  # Create a bar plot with text labels for the top issues in each model
+  ana_plot_top_issues(.df = df, .values = "values", .models = "models")
+
+ana_plot_top_issues <- function(.df, 
+                                .values, 
+                                .models, 
+                                .txt_size=18, 
+                                .nudge=9000){
   .df %>%
     dplyr::mutate(
       key = stringr::str_replace_all(!!rlang::sym(.models), "_", " "),
@@ -1016,6 +1050,18 @@ ana_plot_top_issues <- function(.df, .values, .models, .txt_size=18, .nudge=9000
     )
 }
 
+# Function to visualize the difference between two variables in a dataset
+#
+# Args:
+#   .df: A data frame containing the variables of interest.
+#   .us: A string specifying the first variable to compare.
+#   .them: A string specifying the second variable to compare.
+#   .bins: An integer specifying the number of bins for the histogram.
+#
+# Returns:
+#   A histogram showing the difference between the two variables specified
+#   and a table showing the counts and percentages of the differences above
+#   certain cutoff values.
 ana_view_nets <- function(.df, .us, .them, .bins = 50) {
   df <-
     dplyr::mutate(.df, Diff = !!rlang::sym(.us)-!!rlang::sym(.them))
@@ -1029,11 +1075,22 @@ ana_view_nets <- function(.df, .us, .them, .bins = 50) {
     count = purrr::map_dbl(seq(0, .75, .05), ~ collapse::fsum(df$Diff > .x))
   ) %>%
     dplyr::mutate(pct = count / collapse::fnrow(df))
+  
+  # Print the table in a more readable format using txt_tbl
   print(txt_tbl(t))
+  
+  # Return the histogram plot
   p
 }
 
 
+# Function to get a list of all core action columns from a ballot object
+#
+# Args:
+#   .ballot_obj: A ballot object.
+#
+# Returns:
+#   A list of all core action columns from the ballot object.
 ana_list_all_core_action_cols <- function(.ballot_obj) {
   races <- .ballot_obj$race
   races %>%
@@ -1044,6 +1101,14 @@ ana_list_all_core_action_cols <- function(.ballot_obj) {
     unlist()
 }
 
+# Function to export all CSV files from a specified project to a new directory
+#
+# Args:
+#   .project: A character string specifying the name of the project.
+#   .path: A character string specifying the path to the directory where the CSV files are located. Default is the current working directory.
+#
+# Returns:
+#   None
 ana_export_all_files <- function(.project,
                                  .path = fs::path_wd()) {
   f_names <- fs::dir_ls(fs::path(.path, "Reports"), glob = "*.csv")
